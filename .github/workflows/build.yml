@@ -24,6 +24,8 @@ jobs:
         run: |
           go build -o repo-copy${{ matrix.os == 'windows-latest' ? '.exe' : '' }}
 
+      - name: List files in the directory
+        run: ls -l
 
       - name: Create Release
         id: create_release
