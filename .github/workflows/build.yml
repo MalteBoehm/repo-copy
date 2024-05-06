@@ -16,7 +16,6 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
-
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -25,10 +24,6 @@ jobs:
       - name: Build
         run: |
           go build -o repo-copy${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-        
-      - name: Rename Binary on Windows
-        if: matrix.os == 'windows-latest'
-        run: mv repo-copy.exe repo-copy
 
       - name: Create Release
         id: create_release
@@ -36,8 +31,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_COPY_TOKEN }}
         with:
-          tag_name: release-${{ github.sha }}
-          release_name: Release ${{ github.sha }}
+          tag_name: release-${{ github.sha }}-${{ matrix.os }}
+          release_name: Release ${{ github.sha }} for ${{ matrix.os }}
           draft: false
           prerelease: false
 
@@ -50,3 +45,4 @@ jobs:
           asset_path: ./repo-copy
           asset_name: repo-copy-${{ matrix.os }}
           asset_content_type: application/octet-stream
+
