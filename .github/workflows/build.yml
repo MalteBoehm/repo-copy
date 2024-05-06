@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -13,16 +16,20 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: '1.17'
+
       - name: Build
         run: |
-          go build -o repo-copy
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            mv repo-copy.exe repo-copy
-          fi
+          go build -o repo-copy${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+        
+      - name: Rename Binary on Windows
+        if: matrix.os == 'windows-latest'
+        run: mv repo-copy.exe repo-copy
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -33,6 +40,7 @@ jobs:
           release_name: Release ${{ format('release-{0}-{1}', github.run_number, github.run_attempt) }}
           draft: false
           prerelease: false
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
