@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Build
+        run: |
+          go build -o repo-copy
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            mv repo-copy.exe repo-copy
+          fi
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./repo-copy
+          asset_name: repo-copy-${{ matrix.os }}
+          asset_content_type: application/octet-stream
