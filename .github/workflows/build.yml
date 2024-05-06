@@ -36,8 +36,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_COPY_TOKEN }}
         with:
-          tag_name: ${{ format('release-{0}-{1}', github.run_number, github.run_attempt) }}
-          release_name: Release ${{ format('release-{0}-{1}', github.run_number, github.run_attempt) }}
+          tag_name: release-${{ github.sha }}
+          release_name: Release ${{ github.sha }}
           draft: false
           prerelease: false
 
