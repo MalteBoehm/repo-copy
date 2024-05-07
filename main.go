@@ -3,16 +3,26 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	gitignore "github.com/sabhiram/go-gitignore"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"text/tabwriter"
 )
+
+var ignoreMatcher *gitignore.GitIgnore
+
+func init() {
+	gitignoreContents, err := os.ReadFile(".gitignore")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ignoreMatcher = gitignore.CompileIgnoreLines(strings.Split(string(gitignoreContents), "\n")...)
+}
 
 func main() {
 	if len(os.Args) != 1 {
@@ -29,11 +39,7 @@ func main() {
 	var sb strings.Builder
 	var totalFiles, totalLines, totalWords, totalChars int
 	for _, f := range files {
-		if !isCodeFile(f) {
-			continue
-		}
-
-		content, err := ioutil.ReadFile(f)
+		content, err := os.ReadFile(f)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -54,7 +60,7 @@ func main() {
 	}
 
 	filename := "codebase.txt"
-	err = ioutil.WriteFile(filename, []byte(sb.String()), 0644)
+	err = os.WriteFile(filename, []byte(sb.String()), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,9 +109,6 @@ func main() {
 
 	languages := make(map[string]int)
 	for _, f := range files {
-		if !isCodeFile(f) {
-			continue
-		}
 		ext := filepath.Ext(f)
 		languages[ext]++
 	}
@@ -124,68 +127,45 @@ func main() {
 	tw.Flush()
 }
 
+func shouldIgnore(path string) bool {
+	if filepath.Base(path) == "favicon.ico" {
+		return true
+	}
+	// ignore all images
+	if strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".jpg") || strings.HasSuffix(path, ".jpeg") || strings.HasSuffix(path, ".gif") {
+		return true
+
+	}
+
+	relPath, err := filepath.Rel(".", path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ignoreMatcher.MatchesPath(relPath)
+}
+
 func getFiles(root string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if info.IsDir() {
-			if shouldIgnoreDir(path) {
+			if shouldIgnore(path) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if !shouldIgnoreFile(path) {
+
+		if !shouldIgnore(path) {
 			files = append(files, path)
 		}
+
 		return nil
 	})
+
 	return files, err
-}
-
-func shouldIgnoreDir(path string) bool {
-	if filepath.Base(path) == "vendor" {
-		return true
-	}
-
-	gitignore, err := ioutil.ReadFile(".gitignore")
-	if err != nil {
-		return false
-	}
-	for _, line := range strings.Split(string(gitignore), "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" && strings.HasSuffix(line, "/") && strings.HasPrefix(path, line) {
-			return true
-		}
-	}
-	return false
-}
-
-func shouldIgnoreFile(path string) bool {
-	gitignore, err := ioutil.ReadFile(".gitignore")
-	if err != nil {
-		return false
-	}
-	for _, line := range strings.Split(string(gitignore), "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasSuffix(line, "/") {
-			match, err := filepath.Match(line, path)
-			if err != nil {
-				continue
-			}
-			if match {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-var codeFileExtensions = regexp.MustCompile(`\.(go|java|py|c|cpp|h|hpp|js|ts|php|rb|swift|kt|scala|rs|cs)$`)
-
-func isCodeFile(path string) bool {
-	return codeFileExtensions.MatchString(path)
 }
 
 func countTokens(text string) int {
