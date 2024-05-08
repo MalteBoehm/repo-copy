@@ -2,33 +2,49 @@ name: Build
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: '1.17'
       - name: Build
         run: |
-          go build -o repo-copy
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            mv repo-copy.exe repo-copy
-          fi
+          go build -o repo-copy${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+
+      - name: List files in the directory
+        run: ls -l
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_COPY_TOKEN }}
+        with:
+          tag_name: release-${{ github.sha }}-${{ matrix.os }}
+          release_name: Release ${{ github.sha }} for ${{ matrix.os }}
+          draft: false
+          prerelease: false
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.REPO_COPY_TOKEN }}
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./repo-copy
           asset_name: repo-copy-${{ matrix.os }}
           asset_content_type: application/octet-stream
