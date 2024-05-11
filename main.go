@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"bufio"
 	"fmt"
 	gitignore "github.com/sabhiram/go-gitignore"
@@ -127,14 +128,43 @@ func main() {
 	tw.Flush()
 }
 
+// isBinaryFile checks if a file is a binary file
+func isBinaryFile(filename string) (bool, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	buf := make([]byte, 512)
+	_, err = f.Read(buf)
+	if err != nil {
+		return false, err
+	}
+
+	contentType := http.DetectContentType(buf)
+	return !strings.HasPrefix(contentType, "text/"), nil
+}
+
+
 func shouldIgnore(path string) bool {
 	if filepath.Base(path) == "favicon.ico" {
 		return true
 	}
-	// ignore all images
-	if strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".jpg") || strings.HasSuffix(path, ".jpeg") || strings.HasSuffix(path, ".gif") {
+	isBinary, err := isBinaryFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if isBinary {
 		return true
-
+	}
+	// Ignore files based on their extension
+	ignoredExtensions := []string{".idx", ".woff", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".txt", ".html", ".properties", ".scss", ".sh", ".sample", ".md", ".prettierignore", ".prettierrc"}
+	ext := filepath.Ext(path)
+	for _, ignoredExt := range ignoredExtensions {
+		if ext == ignoredExt {
+			return true
+		}
 	}
 
 	relPath, err := filepath.Rel(".", path)
@@ -143,6 +173,7 @@ func shouldIgnore(path string) bool {
 	}
 	return ignoreMatcher.MatchesPath(relPath)
 }
+
 
 func getFiles(root string) ([]string, error) {
 	var files []string
