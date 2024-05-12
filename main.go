@@ -132,14 +132,16 @@ func main() {
 func isBinaryFile(filename string) (bool, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		return false, err
+		// If the file cannot be opened, treat it as a non-binary file
+		return false, nil
 	}
 	defer f.Close()
 
 	buf := make([]byte, 512)
 	_, err = f.Read(buf)
 	if err != nil {
-		return false, err
+		// If the file cannot be read, treat it as a non-binary file
+		return false, nil
 	}
 
 	contentType := http.DetectContentType(buf)
