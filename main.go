@@ -157,7 +157,7 @@ func shouldIgnore(path string) bool {
 
 	// Ignore files based on their extension
 	ext := filepath.Ext(path)
-	ignoredExtensions := []string{".gitignore", ".idx", ".woff", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".txt", ".html", ".properties", ".scss", ".sh", ".sample", ".prettierignore", ".prettierrc"}
+	ignoredExtensions := []string{".gitignore", ".git", ".pdf", ".idx", ".woff", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".txt", ".html", ".properties", ".scss", ".sh", ".sample", ".prettierignore", ".prettierrc"}
 	for _, ignoredExt := range ignoredExtensions {
 		if ext == ignoredExt {
 			return true
